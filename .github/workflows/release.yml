@@ -32,9 +32,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: windows-build
-          path: |
-            release/*.exe
-            release/*.exe.blockmap
+          path: release/**/*.exe
           retention-days: 1
 
   build-macos:
@@ -68,10 +66,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: macos-build
-          path: |
-            release/*.dmg
-            release/*.dmg.blockmap
-            release/*.zip
+          path: release/**/*.dmg
           retention-days: 1
 
   build-linux:
@@ -100,9 +95,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: linux-build
-          path: |
-            release/*.AppImage
-            release/*.deb
+          path: release/**/*.AppImage
           retention-days: 1
 
   release:
@@ -120,7 +113,12 @@ jobs:
           path: artifacts
 
       - name: Display structure of downloaded files
-        run: ls -R artifacts
+        run: |
+          if [ -d artifacts ]; then
+            ls -R artifacts
+          else
+            echo "No artifacts directory found"
+          fi
 
       - name: Create Release
         uses: softprops/action-gh-release@v2
