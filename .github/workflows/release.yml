@@ -32,7 +32,10 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: windows-build
-          path: release/**/*.exe
+          path: |
+            release/**/*.exe
+            release/**/*.exe.blockmap
+            release/**/latest.yml
           retention-days: 1
 
   build-macos:
@@ -66,7 +69,11 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: macos-build
-          path: release/**/*.dmg
+          path: |
+            release/**/*.dmg
+            release/**/*.dmg.blockmap
+            release/**/*.zip
+            release/**/latest-mac.yml
           retention-days: 1
 
   build-linux:
@@ -95,7 +102,9 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: linux-build
-          path: release/**/*.AppImage
+          path: |
+            release/**/*.AppImage
+            release/**/latest-linux.yml
           retention-days: 1
 
   release:
@@ -124,9 +133,10 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           files: |
-            artifacts/windows-build/*
-            artifacts/macos-build/*
-            artifacts/linux-build/*
+            artifacts/**/*.exe
+            artifacts/**/*.dmg
+            artifacts/**/*.AppImage
+            artifacts/**/*.zip
           draft: false
           prerelease: false
           generate_release_notes: true
