@@ -3,6 +3,7 @@ import { ipcMain, desktopCapturer, BrowserWindow, shell, app, dialog } from 'ele
 import fs from 'node:fs/promises'
 import path from 'node:path'
 import { RECORDINGS_DIR } from '../main'
+import { tMain } from '../i18n'
 
 let selectedSource: any = null
 
@@ -64,13 +65,13 @@ export function registerIpcHandlers(
       return {
         success: true,
         path: videoPath,
-        message: 'Video stored successfully'
+        message: tMain('Video stored successfully')
       }
     } catch (error) {
       console.error('Failed to store video:', error)
       return {
         success: false,
-        message: 'Failed to store video',
+        message: tMain('Failed to store video'),
         error: String(error)
       }
     }
@@ -84,7 +85,7 @@ export function registerIpcHandlers(
       const videoFiles = files.filter(file => file.endsWith('.webm'))
       
       if (videoFiles.length === 0) {
-        return { success: false, message: 'No recorded video found' }
+        return { success: false, message: tMain('No recorded video found') }
       }
       
       const latestVideo = videoFiles.sort().reverse()[0]
@@ -93,12 +94,12 @@ export function registerIpcHandlers(
       return { success: true, path: videoPath }
     } catch (error) {
       console.error('Failed to get video path:', error)
-      return { success: false, message: 'Failed to get video path', error: String(error) }
+      return { success: false, message: tMain('Failed to get video path'), error: String(error) }
     }
   })
 
   ipcMain.handle('set-recording-state', (_, recording: boolean) => {
-    const source = selectedSource || { name: 'Screen' }
+    const source = selectedSource || { name: tMain('Screen') }
     if (onRecordingStateChange) {
       onRecordingStateChange(recording, source.name)
     }
@@ -131,10 +132,10 @@ export function registerIpcHandlers(
   ipcMain.handle('save-exported-video', async (_, videoData: ArrayBuffer, fileName: string) => {
     try {
       const result = await dialog.showSaveDialog({
-        title: 'Save Exported Video',
+        title: tMain('Save Exported Video'),
         defaultPath: path.join(app.getPath('downloads'), fileName),
         filters: [
-          { name: 'MP4 Video', extensions: ['mp4'] }
+          { name: tMain('MP4 Video'), extensions: ['mp4'] }
         ],
         properties: ['createDirectory', 'showOverwriteConfirmation']
       });
@@ -143,7 +144,7 @@ export function registerIpcHandlers(
         return {
           success: false,
           cancelled: true,
-          message: 'Export cancelled'
+          message: tMain('Export cancelled')
         };
       }
       await fs.writeFile(result.filePath, Buffer.from(videoData));
@@ -151,13 +152,13 @@ export function registerIpcHandlers(
       return {
         success: true,
         path: result.filePath,
-        message: 'Video exported successfully'
+        message: tMain('Video exported successfully')
       };
     } catch (error) {
       console.error('Failed to save exported video:', error)
       return {
         success: false,
-        message: 'Failed to save exported video',
+        message: tMain('Failed to save exported video'),
         error: String(error)
       }
     }
@@ -166,11 +167,11 @@ export function registerIpcHandlers(
   ipcMain.handle('open-video-file-picker', async () => {
     try {
       const result = await dialog.showOpenDialog({
-        title: 'Select Video File',
+        title: tMain('Select Video File'),
         defaultPath: RECORDINGS_DIR,
         filters: [
-          { name: 'Video Files', extensions: ['webm', 'mp4', 'mov', 'avi', 'mkv'] },
-          { name: 'All Files', extensions: ['*'] }
+          { name: tMain('Video Files'), extensions: ['webm', 'mp4', 'mov', 'avi', 'mkv'] },
+          { name: tMain('All Files'), extensions: ['*'] }
         ],
         properties: ['openFile']
       });
@@ -187,7 +188,7 @@ export function registerIpcHandlers(
       console.error('Failed to open file picker:', error);
       return {
         success: false,
-        message: 'Failed to open file picker',
+        message: tMain('Failed to open file picker'),
         error: String(error)
       };
     }

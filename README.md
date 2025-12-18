@@ -9,6 +9,10 @@
 
 # <p align="center">OpenScreen</p>
 
+<p align="center">
+  <strong>English</strong> | <a href="README_zh-CN.md">简体中文</a>
+</p>
+
 <p align="center"><strong>OpenScreen is your free, open-source alternative to Screen Studio (sort of).</strong></p>
 
 
@@ -46,7 +50,7 @@ OpenScreen is 100% free for personal and commercial use. Use it, modify it, dist
 
 ## Installation
 
-Download the latest installer for your platform from the [GitHub Releases](https://github.com/siddharthvaddem/openscreen/releases) page.
+Download the latest installer for your platform from the [GitHub Releases](https://github.com/fengjinyi98/openscreen/releases) page.
 
 ### macOS
 

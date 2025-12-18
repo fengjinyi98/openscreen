@@ -1,5 +1,6 @@
 import React from "react";
 import { useTimelineContext } from "dnd-timeline";
+import { useI18n } from "@/i18n";
 
 interface Keyframe {
   id: string;
@@ -13,6 +14,7 @@ interface KeyframeMarkersProps {
 }
 
 const KeyframeMarkers: React.FC<KeyframeMarkersProps> = ({ keyframes, selectedKeyframeId, setSelectedKeyframeId }) => {
+  const { t } = useI18n();
   const { sidebarWidth, range, valueToPixels } = useTimelineContext();
   return (
     <>
@@ -28,7 +30,7 @@ const KeyframeMarkers: React.FC<KeyframeMarkersProps> = ({ keyframes, selectedKe
               e.stopPropagation();
               setSelectedKeyframeId(kf.id);
             }}
-            title={`Keyframe @ ${kf.time}ms`}
+            title={t('Keyframe @ {{time}}ms', { time: kf.time })}
           >
             <div style={{
               width: '10px',

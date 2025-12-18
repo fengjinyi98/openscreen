@@ -3,6 +3,7 @@ import { Rnd } from "react-rnd";
 import type { AnnotationRegion } from "./types";
 import { cn } from "@/lib/utils";
 import { getArrowComponent } from "./ArrowSvgs";
+import { useI18n } from "@/i18n";
 
 interface AnnotationOverlayProps {
   annotation: AnnotationRegion;
@@ -27,6 +28,7 @@ export function AnnotationOverlay({
   zIndex,
   isSelectedBoost,
 }: AnnotationOverlayProps) {
+  const { t } = useI18n();
   const x = (annotation.position.x / 100) * containerWidth;
   const y = (annotation.position.y / 100) * containerHeight;
   const width = (annotation.size.width / 100) * containerWidth;
@@ -84,7 +86,7 @@ export function AnnotationOverlay({
           return (
             <img
               src={annotation.content}
-              alt="Annotation"
+              alt={t('Annotation')}
               className="w-full h-full object-contain"
               draggable={false}
             />
@@ -92,7 +94,7 @@ export function AnnotationOverlay({
         }
         return (
           <div className="w-full h-full flex items-center justify-center text-slate-400 text-sm">
-            No image
+            {t('No image')}
           </div>
         );
 
@@ -100,7 +102,7 @@ export function AnnotationOverlay({
         if (!annotation.figureData) {
           return (
             <div className="w-full h-full flex items-center justify-center text-slate-400 text-sm">
-              No arrow data
+              {t('No arrow data')}
             </div>
           );
         }

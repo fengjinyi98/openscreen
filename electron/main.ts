@@ -4,6 +4,7 @@ import path from 'node:path'
 import fs from 'node:fs/promises'
 import { createHudOverlayWindow, createEditorWindow, createSourceSelectorWindow } from './windows'
 import { registerIpcHandlers } from './ipc/handlers'
+import { tMain } from './i18n'
 
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
@@ -69,11 +70,11 @@ function getTrayIcon(filename: string) {
 function updateTrayMenu(recording: boolean = false) {
   if (!tray) return;
   const trayIcon = recording ? recordingTrayIcon : defaultTrayIcon;
-  const trayToolTip = recording ? `Recording: ${selectedSourceName}` : "OpenScreen";
+  const trayToolTip = recording ? tMain('Recording: {{source}}', { source: selectedSourceName }) : "OpenScreen";
   const menuTemplate = recording
     ? [
         {
-          label: "Stop Recording",
+          label: tMain("Stop Recording"),
           click: () => {
             if (mainWindow && !mainWindow.isDestroyed()) {
               mainWindow.webContents.send("stop-recording-from-tray");
@@ -83,7 +84,7 @@ function updateTrayMenu(recording: boolean = false) {
       ]
     : [
         {
-          label: "Open",
+          label: tMain("Open"),
           click: () => {
             if (mainWindow && !mainWindow.isDestroyed()) {
               mainWindow.isMinimized() && mainWindow.restore();
@@ -93,7 +94,7 @@ function updateTrayMenu(recording: boolean = false) {
           },
         },
         {
-          label: "Quit",
+          label: tMain("Quit"),
           click: () => {
             app.quit();
           },

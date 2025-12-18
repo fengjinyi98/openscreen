@@ -9,8 +9,10 @@ import { RxDragHandleDots2 } from "react-icons/rx";
 import { FaFolderMinus } from "react-icons/fa6";
 import { FiMinus, FiX } from "react-icons/fi";
 import { ContentClamp } from "../ui/content-clamp";
+import { useI18n } from "@/i18n";
 
 export function LaunchWindow() {
+  const { t } = useI18n();
   const { recording, toggleRecording } = useScreenRecorder();
   const [recordingStart, setRecordingStart] = useState<number | null>(null);
   const [elapsed, setElapsed] = useState(0);
@@ -39,7 +41,7 @@ export function LaunchWindow() {
     const s = (seconds % 60).toString().padStart(2, '0');
     return `${m}:${s}`;
   };
-  const [selectedSource, setSelectedSource] = useState("Screen");
+  const [selectedSource, setSelectedSource] = useState("");
   const [hasSelectedSource, setHasSelectedSource] = useState(false);
 
   useEffect(() => {
@@ -50,7 +52,7 @@ export function LaunchWindow() {
           setSelectedSource(source.name);
           setHasSelectedSource(true);
         } else {
-          setSelectedSource("Screen");
+          setSelectedSource("");
           setHasSelectedSource(false);
         }
       }
@@ -117,7 +119,9 @@ export function LaunchWindow() {
           disabled={recording}
         >
           <MdMonitor size={14} className="text-white" />
-          <ContentClamp truncateLength={6}>{selectedSource}</ContentClamp>
+          <ContentClamp truncateLength={6}>
+            {hasSelectedSource ? selectedSource : t('Screen')}
+          </ContentClamp>
         </Button>
 
         <div className="w-px h-6 bg-white/30" />
@@ -137,7 +141,7 @@ export function LaunchWindow() {
           ) : (
             <>
               <BsRecordCircle size={14} className={hasSelectedSource ? "text-white" : "text-white/50"} />
-              <span className={hasSelectedSource ? "text-white" : "text-white/50"}>Record</span>
+              <span className={hasSelectedSource ? "text-white" : "text-white/50"}>{t('Record')}</span>
             </>
           )}
         </Button>
@@ -154,7 +158,7 @@ export function LaunchWindow() {
           disabled={recording}
         >
           <FaFolderMinus size={14} className="text-white" />
-          <span className={styles.folderText}>Open</span>
+          <span className={styles.folderText}>{t('Open')}</span>
         </Button>
 
          {/* Separator before hide/close buttons */}
@@ -163,7 +167,7 @@ export function LaunchWindow() {
           variant="link"
           size="icon"
           className={`ml-2 ${styles.electronNoDrag} hudOverlayButton`}
-          title="Hide HUD"
+          title={t('Hide HUD')}
           onClick={sendHudOverlayHide}
         >
           <FiMinus size={18} style={{ color: '#fff', opacity: 0.7 }} />
@@ -174,7 +178,7 @@ export function LaunchWindow() {
           variant="link"
           size="icon"
           className={`ml-1 ${styles.electronNoDrag} hudOverlayButton`}
-          title="Close App"
+          title={t('Close App')}
           onClick={sendHudOverlayClose}
         >
           <FiX size={18} style={{ color: '#fff', opacity: 0.7 }} />

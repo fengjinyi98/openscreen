@@ -13,6 +13,7 @@ import { applyZoomTransform } from "./videoPlayback/zoomTransform";
 import { createVideoEventHandlers } from "./videoPlayback/videoEventHandlers";
 import { type AspectRatio, formatAspectRatioForCSS } from "@/utils/aspectRatioUtils";
 import { AnnotationOverlay } from "./AnnotationOverlay";
+import { useI18n } from "@/i18n";
 
 interface VideoPlaybackProps {
   videoPath: string;
@@ -81,6 +82,7 @@ const VideoPlayback = forwardRef<VideoPlaybackRef, VideoPlaybackProps>(({
   onAnnotationPositionChange,
   onAnnotationSizeChange,
 }, ref) => {
+  const { t } = useI18n();
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const containerRef = useRef<HTMLDivElement | null>(null);
   const appRef = useRef<Application | null>(null);
@@ -879,7 +881,7 @@ const VideoPlayback = forwardRef<VideoPlaybackRef, VideoPlaybackProps>(({
         onDurationChange={e => {
           onDurationChange(e.currentTarget.duration);
         }}
-        onError={() => onError('Failed to load video')}
+        onError={() => onError(t('Failed to load video'))}
       />
     </div>
   );

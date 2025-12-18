@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 import { fixWebmDuration } from "@fix-webm-duration/fix";
+import { useI18n } from "@/i18n";
 
 type UseScreenRecorderReturn = {
   recording: boolean;
@@ -7,6 +8,7 @@ type UseScreenRecorderReturn = {
 };
 
 export function useScreenRecorder(): UseScreenRecorderReturn {
+  const { t } = useI18n();
   const [recording, setRecording] = useState(false);
   const mediaRecorder = useRef<MediaRecorder | null>(null);
   const stream = useRef<MediaStream | null>(null);
@@ -83,7 +85,7 @@ export function useScreenRecorder(): UseScreenRecorderReturn {
     try {
       const selectedSource = await window.electronAPI.getSelectedSource();
       if (!selectedSource) {
-        alert("Please select a source to record");
+        alert(t("Please select a source to record"));
         return;
       }
 
@@ -102,7 +104,7 @@ export function useScreenRecorder(): UseScreenRecorderReturn {
       });
       stream.current = mediaStream;
       if (!stream.current) {
-        throw new Error("Media stream is not available.");
+        throw new Error(t("Media stream is not available."));
       }
       const videoTrack = stream.current.getVideoTracks()[0];
       try {

@@ -31,11 +31,13 @@ import {
 import { VideoExporter, type ExportProgress, type ExportQuality } from "@/lib/exporter";
 import { type AspectRatio, getAspectRatioValue } from "@/utils/aspectRatioUtils";
 import { getAssetPath } from "@/lib/assetPath";
+import { useI18n } from "@/i18n";
 
 const WALLPAPER_COUNT = 18;
 const WALLPAPER_PATHS = Array.from({ length: WALLPAPER_COUNT }, (_, i) => `/wallpapers/wallpaper${i + 1}.jpg`);
 
 export default function VideoEditor() {
+  const { t } = useI18n();
   const [videoPath, setVideoPath] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -94,16 +96,16 @@ export default function VideoEditor() {
           const videoUrl = toFileUrl(result.path);
           setVideoPath(videoUrl);
         } else {
-          setError('No video to load. Please record or select a video.');
+          setError(t('No video to load. Please record or select a video.'));
         }
       } catch (err) {
-        setError('Error loading video: ' + String(err));
+        setError(t('Error loading video: {{error}}', { error: String(err) }));
       } finally {
         setLoading(false);
       }
     }
     loadVideo();
-  }, []);
+  }, [t]);
 
   // Initialize default wallpaper with resolved asset path
   useEffect(() => {
@@ -436,13 +438,13 @@ export default function VideoEditor() {
 
   const handleExport = useCallback(async () => {
     if (!videoPath) {
-      toast.error('No video loaded');
+      toast.error(t('No video loaded'));
       return;
     }
 
     const video = videoPlaybackRef.current?.video;
     if (!video) {
-      toast.error('Video not ready');
+      toast.error(t('Video not ready'));
       return;
     }
 
@@ -460,7 +462,7 @@ export default function VideoEditor() {
       // Get actual video dimensions to match recording resolution
       const video = videoPlaybackRef.current?.video;
       if (!video) {
-        toast.error('Video not ready');
+        toast.error(t('Video not ready'));
         return;
       }
       
@@ -590,16 +592,25 @@ export default function VideoEditor() {
         const saveResult = await window.electronAPI.saveExportedVideo(arrayBuffer, fileName);
         
         if (saveResult.cancelled) {
-          toast.info('Export cancelled');
+          toast.info(t('Export cancelled'));
         } else if (saveResult.success) {
-          toast.success(`Video exported successfully to ${saveResult.path}`);
+          const savePath = saveResult.path;
+          toast.success(
+            savePath
+              ? t('Video exported successfully to {{path}}', { path: savePath })
+              : t('Video exported successfully')
+          );
         } else {
-          setExportError(saveResult.message || 'Failed to save video');
-          toast.error(saveResult.message || 'Failed to save video');
+          const message = saveResult.message || 'Failed to save video';
+          const localized = t(message);
+          setExportError(localized);
+          toast.error(localized);
         }
       } else {
-        setExportError(result.error || 'Export failed');
-        toast.error(result.error || 'Export failed');
+        const message = result.error || 'Export failed';
+        const localized = t(message);
+        setExportError(localized);
+        toast.error(localized);
       }
 
       if (wasPlaying) {
@@ -607,30 +618,31 @@ export default function VideoEditor() {
       }
     } catch (error) {
       console.error('Export error:', error);
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-      setExportError(errorMessage);
-      toast.error(`Export failed: ${errorMessage}`);
+      const rawErrorMessage = error instanceof Error ? error.message : 'Unknown error';
+      const localizedError = t(rawErrorMessage);
+      setExportError(localizedError);
+      toast.error(t('Export failed: {{error}}', { error: localizedError }));
     } finally {
       setIsExporting(false);
       exporterRef.current = null;
     }
-  }, [videoPath, wallpaper, zoomRegions, trimRegions, shadowIntensity, showBlur, motionBlurEnabled, borderRadius, padding, cropRegion, annotationRegions, isPlaying, aspectRatio, exportQuality]);
+  }, [videoPath, wallpaper, zoomRegions, trimRegions, shadowIntensity, showBlur, motionBlurEnabled, borderRadius, padding, cropRegion, annotationRegions, isPlaying, aspectRatio, exportQuality, t]);
 
   const handleCancelExport = useCallback(() => {
     if (exporterRef.current) {
       exporterRef.current.cancel();
-      toast.info('Export cancelled');
+      toast.info(t('Export cancelled'));
       setShowExportDialog(false);
       setIsExporting(false);
       setExportProgress(null);
       setExportError(null);
     }
-  }, []);
+  }, [t]);
 
   if (loading) {
     return (
       <div className="flex items-center justify-center h-screen bg-background">
-        <div className="text-foreground">Loading video...</div>
+        <div className="text-foreground">{t('Loading video...')}</div>
       </div>
     );
   }
