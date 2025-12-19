@@ -50,6 +50,13 @@ const zhCN: Record<string, string> = {
   'No recorded video found': '未找到录制视频',
   'Failed to get video path': '获取视频路径失败',
 
+  'Please select a source to record': '请先选择要录制的来源',
+  'Invalid recording source': '录制来源无效',
+  'FFmpeg recording currently supports only screen sources.': 'FFmpeg 录制目前仅支持屏幕来源。',
+  'FFmpeg recording is not supported on this platform yet.': 'FFmpeg 录制暂不支持当前平台。',
+  'Failed to start recording': '开始录制失败',
+  'Failed to stop recording': '停止录制失败',
+
   'Screen': '屏幕',
 }
 

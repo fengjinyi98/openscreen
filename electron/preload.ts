@@ -20,7 +20,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   openSourceSelector: () => {
     return ipcRenderer.invoke('open-source-selector')
   },
-  selectSource: (source: any) => {
+  selectSource: (source: unknown) => {
     return ipcRenderer.invoke('select-source', source)
   },
   getSelectedSource: () => {
@@ -33,6 +33,14 @@ contextBridge.exposeInMainWorld('electronAPI', {
 
   getRecordedVideoPath: () => {
     return ipcRenderer.invoke('get-recorded-video-path')
+  },
+
+  startRecording: (options?: { fps?: number }) => {
+    return ipcRenderer.invoke('start-recording', options)
+  },
+
+  stopRecording: () => {
+    return ipcRenderer.invoke('stop-recording')
   },
   setRecordingState: (recording: boolean) => {
     return ipcRenderer.invoke('set-recording-state', recording)

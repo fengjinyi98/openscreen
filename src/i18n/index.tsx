@@ -19,6 +19,7 @@ function translateKnownPatternsZh(message: string): string | null {
   const patterns: Array<{ regex: RegExp; template: string }> = [
     { regex: /^Failed to load video:\s*(.+)$/i, template: '加载视频失败：{{detail}}' },
     { regex: /^Failed to load background image:\s*(.+)$/i, template: '加载背景图片失败：{{detail}}' },
+    { regex: /^FFmpeg exited with code\s*(.+)\.$/i, template: 'FFmpeg 已退出，退出码：{{detail}}' },
   ];
 
   for (const { regex, template } of patterns) {

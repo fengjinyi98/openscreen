@@ -13,7 +13,7 @@ import { useI18n } from "@/i18n";
 
 export function LaunchWindow() {
   const { t } = useI18n();
-  const { recording, toggleRecording } = useScreenRecorder();
+  const { recording, recordingPending, toggleRecording } = useScreenRecorder();
   const [recordingStart, setRecordingStart] = useState<number | null>(null);
   const [elapsed, setElapsed] = useState(0);
 
@@ -116,7 +116,7 @@ export function LaunchWindow() {
           size="sm"
           className={`gap-1 text-white bg-transparent hover:bg-transparent px-0 flex-1 text-left text-xs ${styles.electronNoDrag}`}
           onClick={openSourceSelector}
-          disabled={recording}
+          disabled={recording || recordingPending}
         >
           <MdMonitor size={14} className="text-white" />
           <ContentClamp truncateLength={6}>
@@ -130,7 +130,7 @@ export function LaunchWindow() {
           variant="link"
           size="sm"
           onClick={hasSelectedSource ? toggleRecording : openSourceSelector}
-          disabled={!hasSelectedSource && !recording}
+          disabled={recordingPending || (!hasSelectedSource && !recording)}
           className={`gap-1 text-white bg-transparent hover:bg-transparent px-0 flex-1 text-center text-xs ${styles.electronNoDrag}`}
         >
           {recording ? (
@@ -155,7 +155,7 @@ export function LaunchWindow() {
           size="sm"
           onClick={openVideoFile}
           className={`gap-1 text-white bg-transparent hover:bg-transparent px-0 flex-1 text-right text-xs ${styles.electronNoDrag} ${styles.folderButton}`}
-          disabled={recording}
+          disabled={recording || recordingPending}
         >
           <FaFolderMinus size={14} className="text-white" />
           <span className={styles.folderText}>{t('Open')}</span>

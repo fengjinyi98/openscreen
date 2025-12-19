@@ -89,6 +89,14 @@ _如果有任何问题，请提交 issue 🙏_
 
 欢迎贡献！如果你想帮忙或查看当前正在进行的工作，请查看 open issues 和 [项目路线图](https://github.com/users/siddharthvaddem/projects/3) 来了解项目的当前方向并找到贡献的方式。
 
+### 录制链路（FFmpeg）开发提示
+
+录制工作流正在从 Chromium 的 `MediaRecorder` 迁移到外部 `ffmpeg` 进程（并使用 `ffprobe` 在录制结束后做自动校验）。
+
+- 请确保 `ffmpeg`/`ffprobe` 已加入 PATH，或设置环境变量：`OPENSCREEN_FFMPEG_PATH` / `OPENSCREEN_FFPROBE_PATH`
+- 可运行冒烟自检：`npm run verify:ffmpeg`
+- 当前平台策略：Windows / macOS 优先走 FFmpeg，Linux 暂时回退到旧的 `MediaRecorder` 工作流
+
 ## 许可证
 
 本项目采用 [MIT 许可证](./LICENSE)。使用本软件即表示你同意作者不对因使用本软件而产生的任何问题、损害或索赔承担责任。

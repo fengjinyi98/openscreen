@@ -27,10 +27,38 @@ interface Window {
     getSources: (opts: Electron.SourcesOptions) => Promise<ProcessedDesktopSource[]>
     switchToEditor: () => Promise<void>
     openSourceSelector: () => Promise<void>
-    selectSource: (source: any) => Promise<any>
-    getSelectedSource: () => Promise<any>
+    selectSource: (source: SelectedSource) => Promise<SelectedSource>
+    getSelectedSource: () => Promise<SelectedSource | null>
     storeRecordedVideo: (videoData: ArrayBuffer, fileName: string) => Promise<{ success: boolean; path?: string; message?: string }>
     getRecordedVideoPath: () => Promise<{ success: boolean; path?: string; message?: string }>
+    startRecording: (options?: { fps?: number }) => Promise<{
+      success: boolean;
+      backend: 'ffmpeg';
+      message?: string;
+      ffmpegPath?: string;
+      ffprobePath?: string;
+      encoder?: string;
+    }>
+    stopRecording: () => Promise<{
+      success: boolean;
+      backend: 'ffmpeg';
+      message?: string;
+      path?: string;
+      probe?: {
+        formatName?: string;
+        durationSeconds?: number;
+        sizeBytes?: number;
+        video?: {
+          codec?: string;
+          width?: number;
+          height?: number;
+          avgFrameRate?: number;
+          rFrameRate?: number;
+          bitRate?: number;
+          pixFmt?: string;
+        };
+      };
+    }>
     setRecordingState: (recording: boolean) => Promise<void>
     onStopRecordingFromTray: (callback: () => void) => () => void
     openExternalUrl: (url: string) => Promise<{ success: boolean; error?: string }>
@@ -51,4 +79,13 @@ interface ProcessedDesktopSource {
   display_id: string
   thumbnail: string | null
   appIcon: string | null
+}
+
+interface SelectedSource {
+  id: string
+  name: string
+  rawName?: string
+  display_id?: string
+  thumbnail?: string | null
+  appIcon?: string | null
 }

@@ -25,6 +25,14 @@ Thank you for considering contributing to this project! By contributing, you hel
 5. **Test Your Changes**
    - Test your changes thoroughly to ensure they work as expected and do not break existing functionality.
 
+   ### FFmpeg-based recording notes
+
+   The screen recording workflow is migrating away from Chromium's `MediaRecorder` to an external `ffmpeg` process (and `ffprobe` for post-recording validation).
+
+   - Ensure `ffmpeg` and `ffprobe` are available on your PATH, or set `OPENSCREEN_FFMPEG_PATH` / `OPENSCREEN_FFPROBE_PATH`.
+   - Run a quick sanity check: `npm run verify:ffmpeg`
+   - Current platform support: Windows + macOS are supported, Linux falls back to the legacy `MediaRecorder` workflow for now.
+
 6. **Commit Your Changes**
    - Commit your changes with a clear and concise commit message:
      ```bash

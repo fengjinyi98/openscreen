@@ -90,6 +90,14 @@ _I'm new to open source, idk what I'm doing lol. If something is wrong please ra
 
 Contributions are welcome! If you’d like to help out or see what’s currently being worked on, take a look at the open issues and the [project roadmap](https://github.com/users/siddharthvaddem/projects/3) to understand the current direction of the project and find ways to contribute.
 
+### FFmpeg recording (dev note)
+
+The recording workflow is migrating from Chromium's `MediaRecorder` to an external `ffmpeg` process (and uses `ffprobe` for post-recording validation).
+
+- Ensure `ffmpeg` and `ffprobe` are available on your PATH, or set `OPENSCREEN_FFMPEG_PATH` / `OPENSCREEN_FFPROBE_PATH`.
+- Run a quick sanity check: `npm run verify:ffmpeg`
+- Current platform strategy: Windows + macOS use FFmpeg, Linux falls back to the legacy `MediaRecorder` workflow for now.
+
 
 ## License
 

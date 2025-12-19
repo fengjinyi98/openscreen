@@ -9,6 +9,7 @@ import { useI18n } from "@/i18n";
 interface DesktopSource {
   id: string;
   name: string;
+  rawName: string;
   thumbnail: string | null;
   display_id: string;
   appIcon: string | null;
@@ -23,25 +24,26 @@ export function SourceSelector() {
   useEffect(() => {
     async function fetchSources() {
       setLoading(true);
-      try {
-        const rawSources = await window.electronAPI.getSources({
-          types: ['screen', 'window'],
-          thumbnailSize: { width: 320, height: 180 },
-          fetchWindowIcons: true
-        });
-        setSources(
-          rawSources.map(source => ({
-            id: source.id,
-            name:
-              source.id.startsWith('window:') && source.name.includes(' — ')
-                ? source.name.split(' — ')[1] || source.name
-                : source.name,
-            thumbnail: source.thumbnail,
-            display_id: source.display_id,
-            appIcon: source.appIcon
-          }))
-        );
-      } catch (error) {
+        try {
+          const rawSources = await window.electronAPI.getSources({
+            types: ['screen', 'window'],
+            thumbnailSize: { width: 320, height: 180 },
+            fetchWindowIcons: true
+          });
+          setSources(
+            rawSources.map(source => ({
+              id: source.id,
+              name:
+                source.id.startsWith('window:') && source.name.includes(' — ')
+                  ? source.name.split(' — ')[1] || source.name
+                  : source.name,
+              rawName: source.name,
+              thumbnail: source.thumbnail,
+              display_id: source.display_id,
+              appIcon: source.appIcon
+            }))
+          );
+        } catch (error) {
         console.error('Error loading sources:', error);
       } finally {
         setLoading(false);

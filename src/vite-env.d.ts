@@ -14,8 +14,8 @@ interface Window {
     getSources: (opts: Electron.SourcesOptions) => Promise<ProcessedDesktopSource[]>
     switchToEditor: () => Promise<void>
     openSourceSelector: () => Promise<void>
-    selectSource: (source: any) => Promise<any>
-    getSelectedSource: () => Promise<any>
+    selectSource: (source: SelectedSource) => Promise<SelectedSource>
+    getSelectedSource: () => Promise<SelectedSource | null>
     storeRecordedVideo: (videoData: ArrayBuffer, fileName: string) => Promise<{
       success: boolean
       path?: string
@@ -27,6 +27,34 @@ interface Window {
       path?: string
       message?: string
       error?: string
+    }>
+    startRecording: (options?: { fps?: number }) => Promise<{
+      success: boolean
+      backend: 'ffmpeg'
+      message?: string
+      ffmpegPath?: string
+      ffprobePath?: string
+      encoder?: string
+    }>
+    stopRecording: () => Promise<{
+      success: boolean
+      backend: 'ffmpeg'
+      message?: string
+      path?: string
+      probe?: {
+        formatName?: string
+        durationSeconds?: number
+        sizeBytes?: number
+        video?: {
+          codec?: string
+          width?: number
+          height?: number
+          avgFrameRate?: number
+          rFrameRate?: number
+          bitRate?: number
+          pixFmt?: string
+        }
+      }
     }>
     getAssetBasePath: () => Promise<string | null>
     setRecordingState: (recording: boolean) => Promise<void>
@@ -42,5 +70,6 @@ interface Window {
     setCurrentVideoPath: (path: string) => Promise<{ success: boolean }>
     getCurrentVideoPath: () => Promise<{ success: boolean; path?: string }>
     clearCurrentVideoPath: () => Promise<{ success: boolean }>
+    getPlatform: () => Promise<string>
   }
 }

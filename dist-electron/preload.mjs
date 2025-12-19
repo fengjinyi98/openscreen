@@ -31,6 +31,12 @@ electron.contextBridge.exposeInMainWorld("electronAPI", {
   getRecordedVideoPath: () => {
     return electron.ipcRenderer.invoke("get-recorded-video-path");
   },
+  startRecording: (options) => {
+    return electron.ipcRenderer.invoke("start-recording", options);
+  },
+  stopRecording: () => {
+    return electron.ipcRenderer.invoke("stop-recording");
+  },
   setRecordingState: (recording) => {
     return electron.ipcRenderer.invoke("set-recording-state", recording);
   },

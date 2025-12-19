@@ -30,7 +30,18 @@ export const zhCN: Record<string, string> = {
 
   // 录制
   'Please select a source to record': '请先选择要录制的来源',
+  'Invalid recording source': '录制来源无效',
   'Media stream is not available.': '媒体流不可用。',
+  'Failed to start recording': '开始录制失败',
+  'Failed to stop recording': '停止录制失败',
+  'FFmpeg not found.': '未找到 FFmpeg。',
+  'FFprobe not found.': '未找到 FFprobe。',
+  'Recording already in progress.': '已在录制中。',
+  'No active recording session.': '当前没有正在进行的录制。',
+  'Recording did not produce an output file.': '录制未生成输出文件。',
+  'Invalid window title.': '窗口标题无效。',
+  'FFmpeg recording is not supported on this platform yet.': 'FFmpeg 录制暂不支持当前平台。',
+  'Unsupported recording target for current platform.': '当前平台不支持该录制目标。',
 
   // 编辑器/导出
   'No video to load. Please record or select a video.': '没有可加载的视频。请先录制或选择一个视频文件。',

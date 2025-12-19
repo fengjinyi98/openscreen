@@ -4,18 +4,39 @@ import { useI18n } from "@/i18n";
 
 type UseScreenRecorderReturn = {
   recording: boolean;
+  recordingPending: boolean;
   toggleRecording: () => void;
 };
+
+type RecordingBackend = "ffmpeg" | "mediaRecorder" | null;
+
+type SelectedSource = {
+  id: string;
+  name?: string;
+  rawName?: string;
+  display_id?: string;
+};
+
+function isSelectedSource(value: unknown): value is SelectedSource {
+  return (
+    typeof value === "object" &&
+    value !== null &&
+    typeof (value as { id?: unknown }).id === "string"
+  );
+}
 
 export function useScreenRecorder(): UseScreenRecorderReturn {
   const { t } = useI18n();
   const [recording, setRecording] = useState(false);
+  const [recordingPending, setRecordingPending] = useState(false);
+  const recordingBackend = useRef<RecordingBackend>(null);
   const mediaRecorder = useRef<MediaRecorder | null>(null);
   const stream = useRef<MediaStream | null>(null);
   const chunks = useRef<Blob[]>([]);
   const startTime = useRef<number>(0);
+  const stopPending = useRef(false);
 
-  // Target visually lossless 4K @ 60fps; fall back gracefully when hardware cannot keep up
+  // 目标：尽量接近无损的 4K@60fps；硬件性能不足时自动降级
   const TARGET_FRAME_RATE = 60;
   const TARGET_WIDTH = 3840;
   const TARGET_HEIGHT = 2160;
@@ -47,15 +68,52 @@ export function useScreenRecorder(): UseScreenRecorderReturn {
     return Math.round(18_000_000 * highFrameRateBoost);
   };
 
-  const stopRecording = useRef(() => {
-    if (mediaRecorder.current?.state === "recording") {
-      if (stream.current) {
-        stream.current.getTracks().forEach(track => track.stop());
-      }
-      mediaRecorder.current.stop();
-      setRecording(false);
+  const stopRecording = useRef(async () => {
+    if (stopPending.current) return;
+    stopPending.current = true;
 
+    try {
+      if (recordingBackend.current === "ffmpeg") {
+        const result = await window.electronAPI.stopRecording();
+        setRecording(false);
+        recordingBackend.current = null;
+        window.electronAPI?.setRecordingState(false);
+
+        if (!result.success || !result.path) {
+          console.error("Failed to stop ffmpeg recording:", result.message, result.probe);
+          alert(result.message ? t(result.message) : t("Failed to stop recording"));
+          return;
+        }
+
+        if (result.probe?.video) {
+          const v = result.probe.video;
+          const avgFps = typeof v.avgFrameRate === "number" ? v.avgFrameRate.toFixed(2) : "unknown";
+          console.log(
+            `录制自检：${v.codec ?? "unknown"} ${v.width ?? "?"}x${v.height ?? "?"} avgFps=${avgFps}`
+          );
+        }
+
+        await window.electronAPI.setCurrentVideoPath(result.path);
+        await window.electronAPI.switchToEditor();
+        return;
+      }
+
+      if (mediaRecorder.current?.state === "recording") {
+        if (stream.current) {
+          stream.current.getTracks().forEach(track => track.stop());
+        }
+        mediaRecorder.current.stop();
+        setRecording(false);
+        recordingBackend.current = null;
+        window.electronAPI?.setRecordingState(false);
+      }
+    } catch (error) {
+      console.error("Error stopping recording:", error);
+      setRecording(false);
+      recordingBackend.current = null;
       window.electronAPI?.setRecordingState(false);
+    } finally {
+      stopPending.current = false;
     }
   });
 
@@ -71,6 +129,11 @@ export function useScreenRecorder(): UseScreenRecorderReturn {
     return () => {
       if (cleanup) cleanup();
       
+      if (recordingBackend.current === "ffmpeg") {
+        stopRecording.current();
+        return;
+      }
+
       if (mediaRecorder.current?.state === "recording") {
         mediaRecorder.current.stop();
       }
@@ -81,15 +144,64 @@ export function useScreenRecorder(): UseScreenRecorderReturn {
     };
   }, []);
 
-  const startRecording = async () => {
+  const startRecordingWithFfmpeg = async (selectedSource: unknown): Promise<boolean> => {
     try {
-      const selectedSource = await window.electronAPI.getSelectedSource();
-      if (!selectedSource) {
-        alert(t("Please select a source to record"));
-        return;
+      if (!isSelectedSource(selectedSource)) return false;
+      const sourceId = selectedSource.id;
+      if (!sourceId || typeof sourceId !== "string") return false;
+
+      const platform = await window.electronAPI.getPlatform().catch(() => "win32");
+      const isSupportedPlatform = platform === "win32" || platform === "darwin";
+      const isScreenSource = sourceId.startsWith("screen:");
+      const isWindowSource = sourceId.startsWith("window:");
+      const hasFfmpegApi =
+        typeof window.electronAPI?.startRecording === "function" &&
+        typeof window.electronAPI?.stopRecording === "function";
+
+      const canUseFfmpegForSource =
+        (platform === "win32" && (isScreenSource || isWindowSource)) ||
+        (platform === "darwin" && isScreenSource);
+
+      if (!hasFfmpegApi || !isSupportedPlatform || !canUseFfmpegForSource) return false;
+
+      const result = await window.electronAPI.startRecording({ fps: TARGET_FRAME_RATE });
+      if (!result.success) {
+        console.error("Failed to start ffmpeg recording:", result.message);
+        alert(result.message ? t(result.message) : t("Failed to start recording"));
+        // 已尝试 ffmpeg，但失败；避免静默回退导致用户误判
+        return true;
       }
 
-      const mediaStream = await (navigator.mediaDevices as any).getUserMedia({
+      console.log(`FFmpeg recording started (encoder=${result.encoder ?? "unknown"})`);
+      startTime.current = Date.now();
+      recordingBackend.current = "ffmpeg";
+      setRecording(true);
+      window.electronAPI?.setRecordingState(true);
+      return true;
+    } catch (error) {
+      console.error("Failed to start ffmpeg recording:", error);
+      alert(t("Failed to start recording"));
+      return true;
+    }
+  };
+
+  type ChromeDesktopCaptureConstraints = {
+    audio: false;
+    video: {
+      mandatory: {
+        chromeMediaSource: "desktop";
+        chromeMediaSourceId: string;
+        maxWidth: number;
+        maxHeight: number;
+        maxFrameRate: number;
+        minFrameRate: number;
+      };
+    };
+  };
+
+  const startRecordingWithMediaRecorder = async (selectedSource: SelectedSource) => {
+    try {
+      const desktopConstraints: ChromeDesktopCaptureConstraints = {
         audio: false,
         video: {
           mandatory: {
@@ -101,7 +213,11 @@ export function useScreenRecorder(): UseScreenRecorderReturn {
             minFrameRate: 30,
           },
         },
-      });
+      };
+
+      const mediaStream = await navigator.mediaDevices.getUserMedia(
+        desktopConstraints as unknown as MediaStreamConstraints
+      );
       stream.current = mediaStream;
       if (!stream.current) {
         throw new Error(t("Media stream is not available."));
@@ -117,12 +233,14 @@ export function useScreenRecorder(): UseScreenRecorderReturn {
         console.warn("Unable to lock 4K/60fps constraints, using best available track settings.", error);
       }
 
-      let { width = 1920, height = 1080, frameRate = TARGET_FRAME_RATE } = videoTrack.getSettings();
-      
-      // Ensure dimensions are divisible by 2 for VP9/AV1 codec compatibility
+      const settings = videoTrack.getSettings();
+      let { width = 1920, height = 1080 } = settings;
+      const { frameRate = TARGET_FRAME_RATE } = settings;
+
+      // 确保宽高为偶数，避免 VP9/AV1 编码器因奇数尺寸失败
       width = Math.floor(width / 2) * 2;
       height = Math.floor(height / 2) * 2;
-      
+
       const videoBitsPerSecond = computeBitrate(width, height);
       const mimeType = selectMimeType();
 
@@ -131,7 +249,7 @@ export function useScreenRecorder(): UseScreenRecorderReturn {
           videoBitsPerSecond / 1_000_000
         )} Mbps`
       );
-      
+
       chunks.current = [];
       const recorder = new MediaRecorder(stream.current, {
         mimeType,
@@ -147,7 +265,7 @@ export function useScreenRecorder(): UseScreenRecorderReturn {
         const duration = Date.now() - startTime.current;
         const recordedChunks = chunks.current;
         const buggyBlob = new Blob(recordedChunks, { type: mimeType });
-        // Clear chunks early to free memory immediately after blob creation
+        // 提前清空 chunks，避免 blob 创建后占用过多内存
         chunks.current = [];
         const timestamp = Date.now();
         const videoFileName = `recording-${timestamp}.webm`;
@@ -157,7 +275,7 @@ export function useScreenRecorder(): UseScreenRecorderReturn {
           const arrayBuffer = await videoBlob.arrayBuffer();
           const videoResult = await window.electronAPI.storeRecordedVideo(arrayBuffer, videoFileName);
           if (!videoResult.success) {
-            console.error('Failed to store video:', videoResult.message);
+            console.error("Failed to store video:", videoResult.message);
             return;
           }
 
@@ -167,17 +285,23 @@ export function useScreenRecorder(): UseScreenRecorderReturn {
 
           await window.electronAPI.switchToEditor();
         } catch (error) {
-          console.error('Error saving recording:', error);
+          console.error("Error saving recording:", error);
         }
       };
-      recorder.onerror = () => setRecording(false);
+      recorder.onerror = () => {
+        setRecording(false);
+        recordingBackend.current = null;
+        window.electronAPI?.setRecordingState(false);
+      };
       recorder.start(1000);
       startTime.current = Date.now();
+      recordingBackend.current = "mediaRecorder";
       setRecording(true);
       window.electronAPI?.setRecordingState(true);
     } catch (error) {
-      console.error('Failed to start recording:', error);
+      console.error("Failed to start recording:", error);
       setRecording(false);
+      recordingBackend.current = null;
       if (stream.current) {
         stream.current.getTracks().forEach(track => track.stop());
         stream.current = null;
@@ -185,9 +309,30 @@ export function useScreenRecorder(): UseScreenRecorderReturn {
     }
   };
 
+  const startRecording = async () => {
+    if (recordingPending) return;
+    setRecordingPending(true);
+
+    try {
+      const selectedSource = await window.electronAPI.getSelectedSource();
+      if (!selectedSource || !isSelectedSource(selectedSource)) {
+        alert(t("Please select a source to record"));
+        return;
+      }
+
+      const handledByFfmpeg = await startRecordingWithFfmpeg(selectedSource);
+      if (handledByFfmpeg) return;
+
+      await startRecordingWithMediaRecorder(selectedSource);
+    } finally {
+      setRecordingPending(false);
+    }
+  };
+
   const toggleRecording = () => {
+    if (recordingPending) return;
     recording ? stopRecording.current() : startRecording();
   };
 
-  return { recording, toggleRecording };
+  return { recording, recordingPending, toggleRecording };
 }

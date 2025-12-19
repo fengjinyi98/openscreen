@@ -1,11 +1,21 @@
-import { ipcMain, desktopCapturer, BrowserWindow, shell, app, dialog } from 'electron'
+import { ipcMain, desktopCapturer, BrowserWindow, shell, app, dialog, screen } from 'electron'
 
 import fs from 'node:fs/promises'
 import path from 'node:path'
 import { RECORDINGS_DIR } from '../main'
 import { tMain } from '../i18n'
+import { FfmpegRecorder } from '../recording/ffmpegRecorder'
 
-let selectedSource: any = null
+type SelectedSource = {
+  id: string
+  name: string
+  rawName?: string
+  display_id?: string
+  thumbnail?: string | null
+  appIcon?: string | null
+}
+
+let selectedSource: SelectedSource | null = null
 
 export function registerIpcHandlers(
   createEditorWindow: () => void,
@@ -14,6 +24,8 @@ export function registerIpcHandlers(
   getSourceSelectorWindow: () => BrowserWindow | null,
   onRecordingStateChange?: (recording: boolean, sourceName: string) => void
 ) {
+  const ffmpegRecorder = new FfmpegRecorder({ recordingsDir: RECORDINGS_DIR })
+
   ipcMain.handle('get-sources', async (_, opts) => {
     const sources = await desktopCapturer.getSources(opts)
     return sources.map(source => ({
@@ -55,6 +67,125 @@ export function registerIpcHandlers(
     createEditorWindow()
   })
 
+  ipcMain.handle('start-recording', async (_, options?: { fps?: number }) => {
+    try {
+      if (!selectedSource) {
+        return { success: false, backend: 'ffmpeg', message: tMain('Please select a source to record') }
+      }
+
+      if (!selectedSource.id || typeof selectedSource.id !== 'string') {
+        return { success: false, backend: 'ffmpeg', message: tMain('Invalid recording source') }
+      }
+
+      const platform = process.platform
+      const sourceId = selectedSource.id
+      const isScreenSource = sourceId.startsWith('screen:')
+      const isWindowSource = sourceId.startsWith('window:')
+
+      if (platform === 'darwin' && !isScreenSource) {
+        return {
+          success: false,
+          backend: 'ffmpeg',
+          message: tMain('FFmpeg recording currently supports only screen sources.'),
+        }
+      }
+
+      if (platform === 'win32' && !isScreenSource && !isWindowSource) {
+        return { success: false, backend: 'ffmpeg', message: tMain('Invalid recording source') }
+      }
+
+      if (platform !== 'win32' && platform !== 'darwin') {
+        return {
+          success: false,
+          backend: 'ffmpeg',
+          message: tMain('FFmpeg recording is not supported on this platform yet.'),
+        }
+      }
+
+      const fps = Number(options?.fps) || 60
+      const timestamp = Date.now()
+      const fileName = `recording-${timestamp}.mp4`
+      const outputPath = path.join(RECORDINGS_DIR, fileName)
+
+      const startResult = isScreenSource
+        ? await (async () => {
+            const displays = screen.getAllDisplays()
+            const displayId = String(selectedSource.display_id ?? '')
+            const displayIndex = displays.findIndex(d => String(d.id) === displayId)
+            const display = displayIndex >= 0 ? displays[displayIndex] : screen.getPrimaryDisplay()
+
+            const scaleFactor = Number(display.scaleFactor) || 1
+            const bounds = display.bounds
+            const boundsPx = {
+              x: Math.round(bounds.x * scaleFactor),
+              y: Math.round(bounds.y * scaleFactor),
+              width: Math.round(bounds.width * scaleFactor),
+              height: Math.round(bounds.height * scaleFactor),
+            }
+            // 保证编码兼容：宽高为偶数
+            boundsPx.width = boundsPx.width - (boundsPx.width % 2)
+            boundsPx.height = boundsPx.height - (boundsPx.height % 2)
+
+            return await ffmpegRecorder.start({
+              fps,
+              outputPath,
+              target: {
+                kind: 'screen',
+                boundsPx,
+                displayIndex: displayIndex >= 0 ? displayIndex : 0,
+              },
+            })
+          })()
+        : await (async () => {
+            const candidates = [selectedSource?.rawName, selectedSource?.name]
+              .filter((value: unknown): value is string => typeof value === 'string')
+              .map(value => value.trim())
+              .filter(Boolean)
+
+            const uniqueTitles = Array.from(new Set(candidates))
+            if (uniqueTitles.length === 0) {
+              return { success: false, backend: 'ffmpeg', message: tMain('Invalid recording source') }
+            }
+
+            let result = null as Awaited<ReturnType<typeof ffmpegRecorder.start>> | null
+            for (const title of uniqueTitles) {
+              result = await ffmpegRecorder.start({ fps, outputPath, target: { kind: 'window', title } })
+              if (result.success) break
+            }
+
+            return (
+              result ?? { success: false, backend: 'ffmpeg', message: tMain('Invalid recording source') }
+            )
+          })()
+
+      if (startResult.success && onRecordingStateChange) {
+        const sourceName = selectedSource?.name || tMain('Screen')
+        onRecordingStateChange(true, sourceName)
+      }
+
+      return startResult
+    } catch (error) {
+      console.error('Failed to start ffmpeg recording:', error)
+      return { success: false, backend: 'ffmpeg', message: tMain('Failed to start recording') }
+    }
+  })
+
+  ipcMain.handle('stop-recording', async () => {
+    try {
+      const stopResult = await ffmpegRecorder.stop()
+
+      if (onRecordingStateChange) {
+        const sourceName = selectedSource?.name || tMain('Screen')
+        onRecordingStateChange(false, sourceName)
+      }
+
+      return stopResult
+    } catch (error) {
+      console.error('Failed to stop ffmpeg recording:', error)
+      return { success: false, backend: 'ffmpeg', message: tMain('Failed to stop recording') }
+    }
+  })
+
 
 
   ipcMain.handle('store-recorded-video', async (_, videoData: ArrayBuffer, fileName: string) => {
@@ -82,7 +213,7 @@ export function registerIpcHandlers(
   ipcMain.handle('get-recorded-video-path', async () => {
     try {
       const files = await fs.readdir(RECORDINGS_DIR)
-      const videoFiles = files.filter(file => file.endsWith('.webm'))
+      const videoFiles = files.filter(file => file.endsWith('.webm') || file.endsWith('.mp4'))
       
       if (videoFiles.length === 0) {
         return { success: false, message: tMain('No recorded video found') }
